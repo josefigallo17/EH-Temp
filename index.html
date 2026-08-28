@@ -264,11 +264,6 @@
 
 <script>
 (function () {
-  // Paste the "When an HTTP request is received" URL from your Power Automate flow here.
-  const POWER_AUTOMATE_URL = 'PASTE_YOUR_POWER_AUTOMATE_URL_HERE';
-  // Must match the "Shared Secret" value used in the flow's Condition step.
-  const SHARED_SECRET = 'eh-ach-2026';
-
   const form = document.getElementById('achForm');
   const submitBtn = document.getElementById('submitBtn');
   const formMsg = document.getElementById('formMsg');
@@ -391,36 +386,43 @@
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting...';
 
-    const payload = {
-      sharedSecret: SHARED_SECRET,
-      fullName: document.getElementById('fullName').value.trim(),
-      loanNumber: document.getElementById('loanNumber').value.trim(),
-      bankName: document.getElementById('bankName').value.trim(),
-      accountType: form.querySelector('input[name="Account Type"]:checked').value,
-      accountNumber: document.getElementById('accountNumber').value.trim(),
-      routingNumber: document.getElementById('routingNumber').value.trim(),
-      date: signDateInput.value,
-      signatureImage: canvas.toDataURL('image/png')
-    };
+    canvas.toBlob(function (blob) {
+      const data = new FormData();
+      data.append('Full Legal Name', document.getElementById('fullName').value.trim());
+      data.append('Loan Number', document.getElementById('loanNumber').value.trim());
+      data.append('Bank Name', document.getElementById('bankName').value.trim());
+      data.append('Account Type', form.querySelector('input[name="Account Type"]:checked').value);
+      data.append('Account Number', document.getElementById('accountNumber').value.trim());
+      data.append('Routing Number', document.getElementById('routingNumber').value.trim());
+      data.append('Date', signDateInput.value);
+      data.append('Authorization Agreed', 'Yes');
+      data.append('signature', blob, 'signature.png');
+      data.append('_subject', 'New ACH Authorization Form Submission');
+      data.append('_template', 'table');
+      data.append('_captcha', 'false');
 
-    fetch(POWER_AUTOMATE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Network response was not ok');
-        form.style.display = 'none';
-        formMsg.style.display = 'none';
-        successScreen.style.display = 'block';
-        successScreen.scrollIntoView({ behavior: 'smooth' });
+      fetch('https://formsubmit.co/ajax/Jose@eastharborfinancial.com', {
+        method: 'POST',
+        body: data,
+        headers: { 'Accept': 'application/json' }
       })
-      .catch(() => {
-        formMsg.textContent = 'Something went wrong sending your submission. Please check your connection and try again.';
-        formMsg.className = 'error';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Complete';
-      });
+        .then((res) => {
+          if (!res.ok) throw new Error('Network response was not ok');
+          return res.json();
+        })
+        .then(() => {
+          form.style.display = 'none';
+          formMsg.style.display = 'none';
+          successScreen.style.display = 'block';
+          successScreen.scrollIntoView({ behavior: 'smooth' });
+        })
+        .catch(() => {
+          formMsg.textContent = 'Something went wrong sending your submission. Please check your connection and try again.';
+          formMsg.className = 'error';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Complete';
+        });
+    }, 'image/png');
   });
 })();
 </script>
